@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTree - Impact Analyzer Map</title>
+    
+    <!-- Google Fonts for Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+
+    <style>
+        /* CSS Reset and Layout setup */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styling */
+        #header {
+            background: linear-gradient(135deg, #10b981, #059669); /* Beautiful Emerald green gradient */
+            color: white;
+            padding: 24px 30px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        #header h1 {
+            margin: 0 0 8px 0;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        #header p {
+            margin: 0;
+            font-size: 1.05rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        /* Map Container */
+        #map {
+            flex: 1 1 auto; /* Takes up all remaining screen height */
+            width: 100%;
+        }
+
+        /* Custom Popup Styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            padding: 0;
+        }
+        
+        .leaflet-popup-content {
+            margin: 20px;
+            min-width: 220px;
+        }
+
+        .popup-custom h3 {
+            margin: 0 0 12px 0;
+            color: #059669;
+            border-bottom: 2px solid #ecfdf5;
+            padding-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .popup-custom p {
+            margin: 10px 0;
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .popup-custom strong {
+            color: #1f2937;
+            font-weight: 600;
+        }
+
+        .popup-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+            margin-top: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        .popup-btn:hover {
+            background: #059669;
+            box-shadow: 0 4px 8px rgba(5, 150, 105, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Map Legend Styling */
+        .info.legend {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            line-height: 1.5;
+            color: #333;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .legend h4 {
+            margin: 0 0 12px 0;
+            font-size: 15px;
+            color: #111827;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 12px;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <div id="header">
+        <h1>EcoTree Location Finder Explorer</h1>
+        <p>Discover pollution hotspots & click anywhere to view planting suggestions.</p>
+    </div>
+
+    <!-- Map Canvas -->
+    <div id="map"></div>
+
+    <!-- Leaflet Configuration & Logic -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    <script>
+        // 1. Initialize Map centered on Tamil Nadu, India
+        // Coordinates: 11.1271 Latitude, 78.6569 Longitude, Zoom Level: 7
+        const map = L.map('map').setView([11.1271, 78.6569], 7);
+
+        // 2. Add OpenStreetMap Base Tiles (Free and Open Source)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // 3. Dummy Pollution Data for key cities in Tamil Nadu
+        const pollutionData = [
+            { city: "Chennai", lat: 13.0827, lng: 80.2707, level: "High", AQI: 165 },
+            { city: "Coimbatore", lat: 11.0168, lng: 76.9558, level: "Medium", AQI: 85 },
+            { city: "Madurai", lat: 9.9252, lng: 78.1198, level: "Medium", AQI: 95 },
+            { city: "Trichy", lat: 10.7905, lng: 78.7047, level: "High", AQI: 125 },
+            { city: "Salem", lat: 11.6643, lng: 78.1460, level: "Medium", AQI: 88 },
+            { city: "Kanyakumari", lat: 8.0883, lng: 77.5385, level: "Low", AQI: 42 },
+            { city: "Ooty", lat: 11.4100, lng: 76.6950, level: "Low", AQI: 22 },
+            { city: "Tiruppur", lat: 11.1085, lng: 77.3411, level: "High", AQI: 140 },
+            { city: "Vellore", lat: 12.9165, lng: 79.1325, level: "High", AQI: 151 },
+            { city: "Tirunelveli", lat: 8.7139, lng: 77.7567, level: "Low", AQI: 48 }
+        ];
+
+        // 4. Function to determine marker color based on pollution level
+        function getPollutionColor(level) {
+            switch(level) {
+                case 'High': return '#ef4444'; // Red
+                case 'Medium': return '#f59e0b'; // Amber/Yellow
+                case 'Low': return '#10b981'; // Green
+                default: return '#3b82f6'; // Blue
+            }
+        }
+
+        // 5. Add Markers for Pollution Hotspots
+        pollutionData.forEach(data => {
+            // Using CircleMarkers for a modern vector look instead of standard pins
+            const marker = L.circleMarker([data.lat, data.lng], {
+                radius: 12,
+                fillColor: getPollutionColor(data.level),
+                color: "#ffffff", // White border
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.85
+            }).addTo(map);
+
+            // Bind a simple tooltip/popup for the existing markers
+            marker.bindPopup(`
+                <div style="font-family: 'Inter', sans-serif;">
+                    <h4 style="margin: 0 0 5px 0; color: #1f2937; font-size: 16px;">${data.city}</h4>
+                    <p style="margin: 2px 0;"><strong>Pollution:</strong> <span style="color: ${getPollutionColor(data.level)}; font-weight: bold;">${data.level}</span></p>
+                    <p style="margin: 2px 0;"><strong>AQI:</strong> ${data.AQI}</p>
+                </div>
+            `);
+        });
+
+        // 6. Helper function to generate dynamic tree suggestions based on latitude (just for realism)
+        function getTreeRecommendations(lat) {
+            if (lat > 12) {
+                return { trees: "Neem, Peepal, Ashoka", co2: "48", o2: "250" };
+            } else if (lat < 10) {
+                return { trees: "Banyan, Tamarind, Teak", co2: "55", o2: "270" };
+            } else {
+                return { trees: "Neem, Banyan, Jamun", co2: "50", o2: "260" };
+            }
+        }
+
+        // 7. Click Event: Allow users to click anywhere on the map
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            // Get slightly varied data based on location
+            const details = getTreeRecommendations(lat);
+
+            const popupContent = `
+                <div class="popup-custom">
+                    <h3>🌳 Planting Details</h3>
+                    <p><strong>Coordinates:</strong><br> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+                    <hr style="border:0; border-top:1px solid #f3f4f6; margin: 10px 0;">
+                    <p><strong>Suggested Trees:</strong><br> ${details.trees}</p>
+                    <p><strong>CO₂ Absorption:</strong><br> ~${details.co2} lbs/year per tree</p>
+                    <p><strong>O₂ Release:</strong><br> ~${details.o2} lbs/year per tree</p>
+                    <button class="popup-btn" onclick="alert('This location has been marked for future plantation tracking!')">Mark for Planting</button>
+                </div>
+            `;
+            
+            // Open an interactive popup at the clicked location
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(popupContent)
+                .openOn(map);
+        });
+
+        // 8. Add Map Legend (Bonus Requirement)
+        const legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            const levels = ['High', 'Medium', 'Low'];
+            
+            let html = '<h4>Pollution Levels</h4>';
+            
+            // Loop through our levels and generate a legend item with a colored circle
+            for (let i = 0; i < levels.length; i++) {
+                const color = getPollutionColor(levels[i]);
+                html += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: ${color};"></div>
+                        <span>${levels[i]} AQI</span>
+                    </div>
+                `;
+            }
+            
+            div.innerHTML = html;
+            return div;
+        };
+
+        legend.addTo(map);
+    </script>
+</body>
+</html>
